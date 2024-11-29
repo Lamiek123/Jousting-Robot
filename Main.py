@@ -91,8 +91,8 @@ HTML = """
         height: 100px;
         background: #007bff;/*change colour*/
         border-radius: 50%;
-        top: 200px;
-        left: 200px;
+        top: 125px;
+        left: 125px;
         touch-action: none;
         }
         </style>
