@@ -63,96 +63,130 @@ def control_motors(direction):
         
 HTML = """
 <!DOCTYPE html>
-
 <html>
 <head>
-    <title> Jousting Robot Controller</title>
+    <title>Jousting Robot Controller</title>
     <style>
-        body{
+        body {
             text-align: center;
-            background-colour: #FF4D4D:
-            }
-            
-    #joystick-container {
-        position: absolute;
-        width:350px;
-        height:350px;
-        margin: 50px auto;
-        background: #b3b3b3;
-        border-radius: 50%;
-        border: 2px solid #aaa;
-         border-top: 30px;
-        border-left: 30px;
+            background-color: #FF4D4D;
         }
         
-    #joystick {
-        position: absolute;
-        width: 100px;
-        height: 100px;
-        background: #007bff;/*change colour*/
-        border-radius: 50%;
-        top: 125px;
-        left: 125px;
-        touch-action: none;
+        #joystick-container {
+            position: absolute;
+            width: 350px;
+            height: 350px;
+            margin: 50px auto;
+            background: #b3b3b3;
+            border-radius: 50%;
+            border: 2px solid #aaa;
         }
-        </style>
-    </head>
-    <body>
-        <div id="joystick-container">
-            <div id="joystick"></div>
-        </div>
-        <p id="status">Status: Waiting...</p>
         
+        #joystick {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background: #007bff; /* Change color */
+            border-radius: 50%;
+            top: 125px; /* Centered within #joystick-container */
+            left: 125px;
+            touch-action: none;
+        }
+        
+        #stabButton {
+            position: absolute;
+            width: 300px;
+            height: 100px;
+            background: #007bff;
+            border: 2px solid black;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            top: 50px;
+            left: 550px; on the page */
+        }
+        
+        #stabButton:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div id="joystick-container">
+        <div id="joystick"></div>
+    </div>
+    <button id="stabButton">Stab!</button>
+    <p id="status">Status: Waiting...</p>
+
     <script>
-        const joystick = document.getElementById("joystick");
-        const container = document.getElementById("joystick-container");
-        const status = document.getElementById("status");
-        
-        const containerRect = container.getBoundingClientRect();
-        const joystickRadius = joystick.offsetWidth / 2;
-        const containerRadius = container.offsetWidth / 2;
-        
+        document.addEventListener("DOMContentLoaded", () => {
+            const joystick = document.getElementById("joystick");
+            const container = document.getElementById("joystick-container");
+            const status = document.getElementById("status");
+            const stabButton = document.getElementById("stabButton");
+
+            const containerRect = container.getBoundingClientRect();
+            const joystickRadius = joystick.offsetWidth / 2;
+            const containerRadius = container.offsetWidth / 2;
+
             let isDragging = false;
 
-        joystick.addEventListener("pointerdown", () => isDragging = true);
-        joystick.addEventListener("pointerup", resetJoystick);
-        joystick.addEventListener("pointermove", (e) => isDragging && moveJoystick(e));
-        
-        function resetJoystick() {
-            isDragging = false;
-            joystick.style.left = `${containerRadius - joystickRadius}px`;
-            joystick.style.top = `${containerRadius - joystickRadius}px`;
-            updateStatus("center");
-        }
-        function moveJoystick(event) {
-            const x = event.clientX - containerRect.left;
-            const y = event.clientY - containerRect.top;
+            joystick.addEventListener("pointerdown", () => isDragging = true);
+            joystick.addEventListener("pointerup", resetJoystick);
+            joystick.addEventListener("pointermove", (e) => isDragging && moveJoystick(e));
+            stabButton.addEventListener("click", sendStabCommand);
 
-            const dx = x - containerRadius, dy = y - containerRadius;
-            const distance = Math.min(Math.hypot(dx, dy), containerRadius - joystickRadius);
-            const angle = Math.atan2(dy, dx);
+            function resetJoystick() {
+                isDragging = false;
+                joystick.style.left = `${containerRadius - joystickRadius}px`;
+                joystick.style.top = `${containerRadius - joystickRadius}px`;
+                updateStatus("center");
+            }
 
-            joystick.style.left = `${Math.cos(angle) * distance + containerRadius - joystickRadius}px`;
-            joystick.style.top = `${Math.sin(angle) * distance + containerRadius - joystickRadius}px`;
+            function moveJoystick(event) {
+                const x = event.clientX - containerRect.left;
+                const y = event.clientY - containerRect.top;
 
-            const direction = getDirection(dx, dy);
-            updateStatus(direction);
-            sendCommand(direction);
-        }
-        function getDirection(dx, dy) {
-            const threshold = containerRadius / 3;
-            if (Math.abs(dx) < threshold && Math.abs(dy) < threshold) return "center";
-            return Math.abs(dy) > Math.abs(dx) ? (dy > 0 ? "down" : "up") : (dx > 0 ? "right" : "left");
-        }
-        function updateStatus(direction) {
-            status.textContent = `Status: Moving ${direction}`;
-        }
-        function sendCommand(direction) {
-            fetch(`/${direction}`).catch(console.error);
-        }
+                const dx = x - containerRadius, dy = y - containerRadius;
+                const distance = Math.min(Math.hypot(dx, dy), containerRadius - joystickRadius);
+                const angle = Math.atan2(dy, dx);
+
+                joystick.style.left = `${Math.cos(angle) * distance + containerRadius - joystickRadius}px`;
+                joystick.style.top = `${Math.sin(angle) * distance + containerRadius - joystickRadius}px`;
+
+                const direction = getDirection(dx, dy);
+                updateStatus(direction);
+                sendCommand(direction);
+            }
+
+            function getDirection(dx, dy) {
+                const threshold = containerRadius / 3;
+                if (Math.abs(dx) < threshold && Math.abs(dy) < threshold) return "center";
+                return Math.abs(dy) > Math.abs(dx) ? (dy > 0 ? "down" : "up") : (dx > 0 ? "right" : "left");
+            }
+
+            function updateStatus(direction) {
+                status.textContent = `Status: Moving ${direction}`;
+            }
+
+            function sendCommand(direction) {
+                fetch(`/${direction}`).catch(console.error);
+            }
+
+            function sendStabCommand() {
+                fetch(`/stab`).then(() => {
+                    updateStatus("stab!");
+                }).catch(console.error);
+            }
+        });
     </script>
-    </body>
+</body>
 </html>
+
 """
     
 # Start web server
@@ -175,6 +209,8 @@ while True:
     # Control motors based on command
     if command in ["forward", "backward", "left", "right", "stop"]:
         control_motors(command)
+    elif command == "stab":
+        perform_stab()
 
     # Serve HTML page
     if command == "":
