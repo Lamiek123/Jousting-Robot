@@ -2,7 +2,9 @@ import network
 import socket
 import machine
 from time import sleep
+import time
 
+# Motor control pins
 motor1_a = machine.Pin(2, machine.Pin.OUT)  
 motor1_b = machine.Pin(3, machine.Pin.OUT)
 motor1_PWM = machine.Pin(0, machine.Pin.OUT)
@@ -10,6 +12,26 @@ motor2_a = machine.Pin(4, machine.Pin.OUT)
 motor2_b = machine.Pin(5, machine.Pin.OUT)
 motor2_PWM = machine.Pin(1, machine.Pin.OUT)
 
+# Buzzer and note frequencies (in Hz)
+buzzer = machine.PWM(machine.Pin(15))
+
+NOTES = {
+    'C4': 261,
+    'D4': 294,
+    'E4': 329,
+    'F4': 349,
+    'G4': 392,
+    'A4': 440,
+    'B4': 466,
+    'C5': 523,
+    'D5': 587,
+    'E5': 659,
+    'F5': 698,
+    'G5': 784,
+    'A5': 880,
+    'B5': 988,
+    'C6': 1047,
+}
 
 # Wi-Fi credentials
 SSID = "CYBERTRON"
@@ -59,8 +81,17 @@ def control_motors(direction):
         motor1_b.off()
         motor2_a.off()
         motor2_b.off()
-        
-        
+
+
+# Function to play a note
+def play_note(frequency, duration):
+    buzzer.freq(frequency)  # Set the frequency
+    buzzer.duty_u16(32768)  # Set a reasonable duty cycle (half of 65535)
+    time.sleep(duration)     # Wait for the note to play
+    buzzer.duty_u16(0)       # Turn off the buzzer
+
+
+# HTML for the web interface
 HTML = """
 <!DOCTYPE html>
 <html>
@@ -69,7 +100,7 @@ HTML = """
     <style>
         body {
             text-align: center;
-            background-color: #FF4D4D;
+            background-color: #99CCFF;
         }
         
         #joystick-container {
@@ -109,8 +140,47 @@ HTML = """
             top: 50px;
             left: 550px; on the page */
         }
+      #retreatButton {
+            position: absolute;
+            width: 300px;
+            height: 100px;
+            background: #007bff;
+            border: 2px solid black;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            top: 150px;
+            left: 550px; on the page 
+        }
+      
+      #soundButton {
+            position: absolute;
+            width: 300px;
+            height: 100px;
+            background: #007bff;
+            border: 2px solid black;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            top: 275px;
+            left: 550px; on the page 
+        }
         
         #stabButton:hover {
+            background: #0056b3;
+        }
+      #retreatButton:hover{
+        background: #0056b3;
+      }
+         #soundButton:hover {
             background: #0056b3;
         }
     </style>
@@ -120,6 +190,8 @@ HTML = """
         <div id="joystick"></div>
     </div>
     <button id="stabButton">Stab!</button>
+    <button id="retreatButton">Retreat!</button>
+    <button id="soundButton">Sound</button>
     <p id="status">Status: Waiting...</p>
 
     <script>
@@ -128,6 +200,9 @@ HTML = """
             const container = document.getElementById("joystick-container");
             const status = document.getElementById("status");
             const stabButton = document.getElementById("stabButton");
+          const retreatButton =
+document.getElementById("retreatButton");
+          const soundButton = document.getElementById("soundButton");
 
             const containerRect = container.getBoundingClientRect();
             const joystickRadius = joystick.offsetWidth / 2;
@@ -138,7 +213,12 @@ HTML = """
             joystick.addEventListener("pointerdown", () => isDragging = true);
             joystick.addEventListener("pointerup", resetJoystick);
             joystick.addEventListener("pointermove", (e) => isDragging && moveJoystick(e));
-            stabButton.addEventListener("click", sendStabCommand);
+          
+          
+  stabButton.addEventListener("click",                sendStabCommand);
+   retreatButton.addEventListner("click",              sendRetreatCommand);
+   soundButton.addEventListner("click",
+     sendSoundCommand);
 
             function resetJoystick() {
                 isDragging = false;
@@ -188,7 +268,7 @@ HTML = """
 </html>
 
 """
-    
+
 # Start web server
 addr = socket.getaddrinfo("0.0.0.0", 8080)[0][-1]
 server = socket.socket()
@@ -196,7 +276,22 @@ server.bind(addr)
 server.listen(1)
 print("Listening on", addr)
 
-# Serve web UI and handle motor commands
+# List of notes and durations for the song
+song = [
+    ('C4', 0.4),
+    ('D4', 0.4),
+    ('E4', 0.4),
+    ('F4', 0.4),
+    ('G4', 0.4),
+    ('C5', 0.6),
+    ('G4', 0.6),
+    ('F4', 0.6),
+    ('E4', 0.6),
+    ('D4', 0.4),
+    ('C4', 0.4)
+]
+
+# Serve web UI and handle motor and song commands
 while True:
     cl, addr = server.accept()
     request = cl.recv(1024).decode("utf-8")
@@ -206,19 +301,19 @@ while True:
     command = request.split(" ")[1][1:]
     print("Command:", command)
 
-    # Control motors based on command
+    # Control motors or play song based on command
     if command in ["forward", "backward", "left", "right", "stop"]:
         control_motors(command)
-    elif command == "stab":
-        perform_stab()
-
-    # Serve HTML page
-    if command == "":
-        response = HTML
-    else:
         response = "Command received: " + command
+    elif command == "play_song":
+        for note, duration in song:
+            if note in NOTES:
+                play_note(NOTES[note], duration)
+                time.sleep(0.2)
+        response = "Song played."
+    else:
+        response = HTML
 
+    # Serve HTML page or response
     cl.send("HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n" + response)
     cl.close()
-        
-        
