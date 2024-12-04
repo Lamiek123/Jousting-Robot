@@ -82,6 +82,9 @@ def control_motors(direction):
         motor2_a.off()
         motor2_b.off()
 
+def perform_stab():
+    print("Stab action performed!")  # Replace with your motor or servo logic
+
 
 # Function to play a note
 def play_note(frequency, duration):
@@ -215,10 +218,9 @@ document.getElementById("retreatButton");
             joystick.addEventListener("pointermove", (e) => isDragging && moveJoystick(e));
           
           
-  stabButton.addEventListener("click",                sendStabCommand);
-   retreatButton.addEventListner("click",              sendRetreatCommand);
-   soundButton.addEventListner("click",
-     sendSoundCommand);
+  stabButton.addEventListener("click", sendStabCommand);
+   retreatButton.addEventListner("click", sendRetreatCommand);
+   soundButton.addEventListner("click", sendSoundCommand);
 
             function resetJoystick() {
                 isDragging = false;
@@ -263,6 +265,10 @@ document.getElementById("retreatButton");
                 }).catch(console.error);
             }
         });
+        function sendSoundCommand(){
+        fetch(`/sound`).then(() => {
+            updateStatus("sound!");
+        }).catch(console.error);
     </script>
 </body>
 </html>
@@ -305,7 +311,7 @@ while True:
     if command in ["forward", "backward", "left", "right", "stop"]:
         control_motors(command)
         response = "Command received: " + command
-    elif command == "play_song":
+    elif command == "sound":
         for note, duration in song:
             if note in NOTES:
                 play_note(NOTES[note], duration)
