@@ -141,9 +141,10 @@ HTML = """
             justify-content: center;
             align-items: center;
             top: 50px;
-            left: 550px; on the page */
+            left: 550px; /* Position on the page */
         }
-      #retreatButton {
+      
+        #retreatButton {
             position: absolute;
             width: 300px;
             height: 100px;
@@ -157,10 +158,10 @@ HTML = """
             justify-content: center;
             align-items: center;
             top: 150px;
-            left: 550px; on the page 
+            left: 550px; /* Position on the page */
         }
       
-      #soundButton {
+        #soundButton {
             position: absolute;
             width: 300px;
             height: 100px;
@@ -174,16 +175,18 @@ HTML = """
             justify-content: center;
             align-items: center;
             top: 275px;
-            left: 550px; on the page 
+            left: 550px; /* Position on the page */
         }
         
         #stabButton:hover {
             background: #0056b3;
         }
-      #retreatButton:hover{
-        background: #0056b3;
-      }
-         #soundButton:hover {
+        
+        #retreatButton:hover {
+            background: #0056b3;
+        }
+
+        #soundButton:hover {
             background: #0056b3;
         }
     </style>
@@ -203,9 +206,8 @@ HTML = """
             const container = document.getElementById("joystick-container");
             const status = document.getElementById("status");
             const stabButton = document.getElementById("stabButton");
-          const retreatButton =
-document.getElementById("retreatButton");
-          const soundButton = document.getElementById("soundButton");
+            const retreatButton = document.getElementById("retreatButton");
+            const soundButton = document.getElementById("soundButton");
 
             const containerRect = container.getBoundingClientRect();
             const joystickRadius = joystick.offsetWidth / 2;
@@ -217,10 +219,9 @@ document.getElementById("retreatButton");
             joystick.addEventListener("pointerup", resetJoystick);
             joystick.addEventListener("pointermove", (e) => isDragging && moveJoystick(e));
           
-          
-  stabButton.addEventListener("click", sendStabCommand);
-   retreatButton.addEventListner("click", sendRetreatCommand);
-   soundButton.addEventListner("click", sendSoundCommand);
+            stabButton.addEventListener("click", sendStabCommand);
+            retreatButton.addEventListener("click", sendRetreatCommand);
+            soundButton.addEventListener("click", sendSoundCommand);
 
             function resetJoystick() {
                 isDragging = false;
@@ -264,19 +265,26 @@ document.getElementById("retreatButton");
                     updateStatus("stab!");
                 }).catch(console.error);
             }
+
+            function sendRetreatCommand() {
+                fetch(`/retreat`).then(() => {
+                    updateStatus("retreat!");
+                }).catch(console.error);
+            }
+
+            function sendSoundCommand() {
+                fetch(`/sound`).then(() => {
+                    updateStatus("sound!");
+                }).catch(console.error);
+            }
         });
-        function sendSoundCommand(){
-        fetch(`/sound`).then(() => {
-            updateStatus("sound!");
-        }).catch(console.error);
     </script>
 </body>
 </html>
-
 """
 
 # Start web server
-addr = socket.getaddrinfo("0.0.0.0", 8080)[0][-1]
+addr = socket.getaddrinfo("0.0.0.0", 8080)[0][-1]  # Port set to 8080
 server = socket.socket()
 server.bind(addr)
 server.listen(1)
@@ -289,37 +297,36 @@ song = [
     ('E4', 0.4),
     ('F4', 0.4),
     ('G4', 0.4),
-    ('C5', 0.6),
-    ('G4', 0.6),
-    ('F4', 0.6),
-    ('E4', 0.6),
-    ('D4', 0.4),
-    ('C4', 0.4)
+    ('A4', 0.4),
+    ('B4', 0.4),
+    ('C5', 0.4),
+    ('C4', 0.4),
 ]
 
-# Serve web UI and handle motor and song commands
 while True:
-    cl, addr = server.accept()
-    request = cl.recv(1024).decode("utf-8")
-    print("Request:", request)
+    client, addr = server.accept()
+    print("Client connected from", addr)
+    request = client.recv(1024)
+    request_str = str(request)
+    print("Request:", request_str)
 
-    # Extract the command from the URL
-    command = request.split(" ")[1][1:]
-    print("Command:", command)
+    # Serve the web page
+    if '/stab' in request_str:
+        perform_stab()
+        client.send('HTTP/1.1 200 OK\n\nStab command received!')
 
-    # Control motors or play song based on command
-    if command in ["forward", "backward", "left", "right", "stop"]:
-        control_motors(command)
-        response = "Command received: " + command
-    elif command == "sound":
+    elif '/retreat' in request_str:
+        control_motors("backward")
+        client.send('HTTP/1.1 200 OK\n\nRetreat command received!')
+
+    elif '/sound' in request_str:
         for note, duration in song:
-            if note in NOTES:
-                play_note(NOTES[note], duration)
-                time.sleep(0.2)
-        response = "Song played."
-    else:
-        response = HTML
+            play_note(NOTES[note], duration)
+        client.send('HTTP/1.1 200 OK\n\nSound command received!')
 
-    # Serve HTML page or response
-    cl.send("HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n" + response)
-    cl.close()
+    elif '/' in request_str:
+        # Default action
+        client.send('HTTP/1.1 200 OK\n\n' + HTML)
+    
+    client.close()
+
