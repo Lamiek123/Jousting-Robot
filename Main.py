@@ -127,7 +127,7 @@ HTML = """
             touch-action: none;
         }
         
-        #stabButton {
+        #stabButton, #retreatButton, #soundButton {
             position: absolute;
             width: 300px;
             height: 100px;
@@ -140,50 +140,24 @@ HTML = """
             display: flex;
             justify-content: center;
             align-items: center;
-            top: 50px;
-            left: 550px; on the page */
-        }
-      #retreatButton {
-            position: absolute;
-            width: 300px;
-            height: 100px;
-            background: #007bff;
-            border: 2px solid black;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            top: 150px;
-            left: 550px; on the page 
-        }
-      
-      #soundButton {
-            position: absolute;
-            width: 300px;
-            height: 100px;
-            background: #007bff;
-            border: 2px solid black;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            top: 275px;
-            left: 550px; on the page 
         }
         
-        #stabButton:hover {
-            background: #0056b3;
+        #stabButton {
+            top: 50px;
+            left: 550px;
         }
-      #retreatButton:hover{
-        background: #0056b3;
-      }
-         #soundButton:hover {
+        
+        #retreatButton {
+            top: 150px;
+            left: 550px;
+        }
+        
+        #soundButton {
+            top: 250px;
+            left: 550px;
+        }
+        
+        #stabButton:hover, #retreatButton:hover, #soundButton:hover {
             background: #0056b3;
         }
     </style>
@@ -203,9 +177,8 @@ HTML = """
             const container = document.getElementById("joystick-container");
             const status = document.getElementById("status");
             const stabButton = document.getElementById("stabButton");
-          const retreatButton =
-document.getElementById("retreatButton");
-          const soundButton = document.getElementById("soundButton");
+            const retreatButton = document.getElementById("retreatButton");
+            const soundButton = document.getElementById("soundButton");
 
             const containerRect = container.getBoundingClientRect();
             const joystickRadius = joystick.offsetWidth / 2;
@@ -216,11 +189,10 @@ document.getElementById("retreatButton");
             joystick.addEventListener("pointerdown", () => isDragging = true);
             joystick.addEventListener("pointerup", resetJoystick);
             joystick.addEventListener("pointermove", (e) => isDragging && moveJoystick(e));
-          
-          
-  stabButton.addEventListener("click", sendStabCommand);
-   retreatButton.addEventListner("click", sendRetreatCommand);
-   soundButton.addEventListner("click", sendSoundCommand);
+
+            stabButton.addEventListener("click", sendStabCommand);
+            retreatButton.addEventListener("click", sendRetreatCommand);
+            soundButton.addEventListener("click", sendSoundCommand);
 
             function resetJoystick() {
                 isDragging = false;
@@ -264,15 +236,22 @@ document.getElementById("retreatButton");
                     updateStatus("stab!");
                 }).catch(console.error);
             }
+
+            function sendRetreatCommand() {
+                fetch(`/retreat`).then(() => {
+                    updateStatus("retreat!");
+                }).catch(console.error);
+            }
+
+            function sendSoundCommand() {
+                fetch(`/sound`).then(() => {
+                    updateStatus("sound!");
+                }).catch(console.error);
+            }
         });
-        function sendSoundCommand(){
-        fetch(`/sound`).then(() => {
-            updateStatus("sound!");
-        }).catch(console.error);
     </script>
 </body>
 </html>
-
 """
 
 # Start web server
@@ -308,9 +287,12 @@ while True:
     print("Command:", command)
 
     # Control motors or play song based on command
-    if command in ["forward", "backward", "left", "right", "stop"]:
+    if command in ["forward", "backward", "left", "right", "stop", "center"]:
         control_motors(command)
-        response = "Command received: " + command
+        response = f"Command received: {command}"
+    elif command == "stab":
+        perform_stab()
+        response = "Stab action performed!"
     elif command == "sound":
         for note, duration in song:
             if note in NOTES:
@@ -323,3 +305,4 @@ while True:
     # Serve HTML page or response
     cl.send("HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n" + response)
     cl.close()
+
